@@ -19,6 +19,7 @@ func main() {
 		}
 	}()
 
+	// Read file line by line
 	scn := bufio.NewScanner(file)
 	for scn.Scan() {
 		fmt.Println(utils.StringSliceFromRegexFindAll(scn.Text(), `[^\s]+`, 8))
