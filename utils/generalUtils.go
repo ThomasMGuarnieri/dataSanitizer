@@ -21,10 +21,3 @@ func StringSliceFromRegexFindAll(s string, expr string, n int) []string {
 	rx, _ := regexp.Compile(expr)
 	return rx.FindAllString(s, n)
 }
-
-// CheckError panics for a new error
-func CheckError(err error) {
-	if err != nil {
-		panic(err)
-	}
-}

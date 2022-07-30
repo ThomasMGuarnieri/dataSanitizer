@@ -1,14 +1,15 @@
 version: '3'
 services:
-  db:
-    image: 'postgres'
-    env_file:
-      - database/database.env
+  postgres:
+    image: 'postgres:latest'
     ports:
       - "5432:5432"
+    deploy:
+      mode: replicated
+      replicas: 1
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: data
     volumes:
-      - database-data:/var/lib/postgresql/data
-
-volumes:
-  database-data: 
-
+      - ./db/postgres/:/var/lib/postgresql/data/

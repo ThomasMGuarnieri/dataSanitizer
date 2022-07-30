@@ -2,41 +2,29 @@ package main
 
 import (
 	"bufio"
-	"dataSanitizer/database"
+	"dataSanitizer/db"
 	"dataSanitizer/utils"
-	"github.com/klassmann/cpfcnpj"
-	_ "github.com/klassmann/cpfcnpj"
-	"log"
+	"fmt"
+)
+
+const (
+	testFile     = "test_access.log"
+	completeFile = "access.log"
 )
 
 func main() {
-	l := make([]string, 8)
-	data := make([]string, 8)
-	file := utils.ReadFile("base_teste.txt")
+	rawData := make([]string, 5)
+	data := make([]string, 5)
+	file := utils.ReadFile(fmt.Sprintf("%s", testFile))
 
 	// Close file when main function finishes
-	defer func() {
-		err := file.Close()
-		if err != nil {
-			log.Fatal(err)
-		}
-	}()
+	defer file.Close()
 
 	// Read file line by line
 	scn := bufio.NewScanner(file)
 	for scn.Scan() {
-		l = utils.StringSliceFromRegexFindAll(scn.Text(), `[^\s]+`, 8)
-		// CPF/PRIVATE/INCOMPLETO/DATA DA ÚLTIMA COMPRA/TICKET MÉDIO/TICKET DA ÚLTIMA COMPRA/LOJA MAIS FREQUÊNTE/LOJA DA ÚLTIMA COMPRA
-
-		// CPF
-		cpf := cpfcnpj.NewCPF(l[0])
-		// If the cpf is not valid jump to the next line
-		if ! cpf.IsValid() {
-			continue
-		}
-
-		// save cpf
-		data[0] = string(cpf)
+		rawData = utils.StringSliceFromRegexFindAll(scn.Text(), `[^\s]+`, 5)
+		// ipAddress | requestType | requestPath | responseStatusCode | accessDate
 
 		// save private
 		data[1] = utils.FilterNullString(l[1])
@@ -55,16 +43,14 @@ func main() {
 
 		// save loja mais frequente
 		data[6] = utils.FilterAndValidateCNPJ(l[6])
-		data[6] = string(database.InsertStoreData(data[6]))
+		data[6] = string(db.InsertStoreData(data[6]))
 
 		// save loja da ultima compra
 		data[7] = utils.FilterAndValidateCNPJ(l[7])
-		data[7] = string(database.InsertStoreData(data[7]))
+		data[7] = string(db.InsertStoreData(data[7]))
 
-		database.InsertPersonData(data)
+		db.InsertPersonData(data)
 
 		//time.Sleep(2 * time.Second)
 	}
 }
-
-
