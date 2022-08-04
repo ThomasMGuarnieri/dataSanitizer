@@ -5,6 +5,9 @@ import (
 	"dataSanitizer/db"
 	"dataSanitizer/utils"
 	"fmt"
+	"regexp"
+	"strconv"
+	"time"
 )
 
 const (
@@ -13,9 +16,10 @@ const (
 )
 
 func main() {
-	rawData := make([]string, 5)
-	data := make([]string, 5)
-	file := utils.ReadFile(fmt.Sprintf("%s", testFile))
+	file := utils.ReadFile(fmt.Sprintf("%s", completeFile))
+	// Changes on the string below may break this program
+	rg := regexp.MustCompile(`(.+) - - \[(.+)] "(.+) /(.+)" (\d{3})`)
+	var ld []db.LogData
 
 	// Close file when main function finishes
 	defer file.Close()
@@ -23,34 +27,33 @@ func main() {
 	// Read file line by line
 	scn := bufio.NewScanner(file)
 	for scn.Scan() {
-		rawData = utils.StringSliceFromRegexFindAll(scn.Text(), `[^\s]+`, 5)
-		// ipAddress | requestType | requestPath | responseStatusCode | accessDate
+		// Needed data:
+		// ipAddress | accessDate | requestType | requestPath | responseStatusCode |
+		match := rg.FindStringSubmatch(scn.Text())
+		if match != nil {
+			sc, err := strconv.Atoi(match[5])
+			if err != nil {
+				fmt.Println("Fail on string to int conversion")
+				panic(err)
+			}
 
-		// save private
-		data[1] = utils.FilterNullString(l[1])
+			dt, err := time.Parse("02/Jan/2006:03:04:05 -0700", match[2])
+			if err != nil {
+				fmt.Println("Fail on string to date conversion")
+				panic(err)
+			}
 
-		// save incompleto
-		data[2] = utils.FilterNullString(l[2])
+			l := db.LogData{
+				IpAddress:          match[1],
+				AccessDate:         dt,
+				RequestType:        match[3],
+				RequestPath:        match[4],
+				ResponseStatusCode: sc,
+			}
 
-		// save data da ultima compra
-		data[3] = utils.FilterNullString(l[3])
-
-		// save ticket medio
-		data[4] = utils.FilterComma(l[4])
-
-		// save ticket da ultima compra
-		data[5] = utils.FilterComma(l[5])
-
-		// save loja mais frequente
-		data[6] = utils.FilterAndValidateCNPJ(l[6])
-		data[6] = string(db.InsertStoreData(data[6]))
-
-		// save loja da ultima compra
-		data[7] = utils.FilterAndValidateCNPJ(l[7])
-		data[7] = string(db.InsertStoreData(data[7]))
-
-		db.InsertPersonData(data)
-
-		//time.Sleep(2 * time.Second)
+			ld = append(ld, l)
+		}
 	}
+
+	fmt.Println("Finished processing file")
 }

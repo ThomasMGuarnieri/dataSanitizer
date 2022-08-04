@@ -17,16 +17,16 @@ const (
 	dbTimeout = time.Second * 60
 )
 
-type logData struct {
+type LogData struct {
 	id                 int
-	ipAddress          string
-	requestType        string
-	requestPath        string
-	responseStatusCode int
-	accessDate         time.Time
+	IpAddress          string
+	RequestType        string
+	RequestPath        string
+	ResponseStatusCode int
+	AccessDate         time.Time
 }
 
-func Insert(d logData) (int, error) {
+func Insert(d LogData) (int, error) {
 	db, err := openDbConnection()
 	if err != nil {
 		return 0, err
@@ -41,7 +41,7 @@ func Insert(d logData) (int, error) {
 		values ($1, $2, $3, $4, $5) returning id`
 
 	err = db.QueryRowContext(ctx, stmt,
-		d.ipAddress, d.requestType, d.requestPath, d.responseStatusCode, d.accessDate,
+		d.IpAddress, d.RequestType, d.RequestPath, d.ResponseStatusCode, d.AccessDate,
 	).Scan(&newId)
 	if err != nil {
 		return 0, nil
