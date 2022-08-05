@@ -5,18 +5,14 @@ import (
 	"dataSanitizer/db"
 	"dataSanitizer/utils"
 	"fmt"
+	"os"
 	"regexp"
 	"strconv"
 	"time"
 )
 
-const (
-	testFile     = "test_access.log"
-	completeFile = "access.log"
-)
-
 func main() {
-	file := utils.ReadFile(fmt.Sprintf("%s", completeFile))
+	file := utils.ReadFile(fmt.Sprintf("%s", os.Args[1]))
 	// Changes on the string below may break this program
 	rg := regexp.MustCompile(`(.+) - - \[(.+)] "(.+) /(.+)" (\d{3})`)
 	var ld []db.LogData
@@ -37,7 +33,7 @@ func main() {
 				panic(err)
 			}
 
-			dt, err := time.Parse("02/Jan/2006:03:04:05 -0700", match[2])
+			dt, err := time.Parse("02/Jan/2006:15:04:05 -0700", match[2])
 			if err != nil {
 				fmt.Println("Fail on string to date conversion")
 				panic(err)
@@ -56,4 +52,9 @@ func main() {
 	}
 
 	fmt.Println("Finished processing file")
+	err := db.BulkLogDataInsert(ld)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("Finished saving data to database")
 }

@@ -1,15 +1,16 @@
 package db
 
 import (
-	"context"
 	"database/sql"
 	"fmt"
+	_ "github.com/lib/pq"
+	"strings"
 	"time"
 )
 
 // This sensitive information must come from environment variables
 const (
-	host      = "postgres"
+	host      = "localhost"
 	port      = 5432
 	user      = "postgres"
 	password  = "password"
@@ -26,35 +27,51 @@ type LogData struct {
 	AccessDate         time.Time
 }
 
-func Insert(d LogData) (int, error) {
+func BulkLogDataInsert(d []LogData) error {
+	var valueStrings []string
+	var valueArgs []interface{}
+
 	db, err := openDbConnection()
 	if err != nil {
-		return 0, err
+		return err
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
-	defer cancel()
+	defer db.Close()
 
-	var newId int
-
-	stmt := `insert into data (ip_address, request_type, request_path, response_status_code, access_date) 
-		values ($1, $2, $3, $4, $5) returning id`
-
-	err = db.QueryRowContext(ctx, stmt,
-		d.IpAddress, d.RequestType, d.RequestPath, d.ResponseStatusCode, d.AccessDate,
-	).Scan(&newId)
+	tx, err := db.Begin()
 	if err != nil {
-		return 0, nil
+		return err
 	}
 
-	return newId, nil
+	for _, l := range d {
+		valueStrings = append(valueStrings, "($1, $2, $3, $4, $5)")
+		valueArgs = append(valueArgs, l.IpAddress)
+		valueArgs = append(valueArgs, l.RequestType)
+		valueArgs = append(valueArgs, l.RequestPath)
+		valueArgs = append(valueArgs, l.ResponseStatusCode)
+		valueArgs = append(valueArgs, l.AccessDate)
+	}
+
+	stmt := fmt.Sprintf("INSERT INTO log_data (ip_address, request_type, request_path, response_status_code, access_date) VALUES %s", strings.Join(valueStrings, ","))
+	_, err = tx.Exec(stmt, valueArgs...)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // openConnection opens a new connection with the db
 func openDbConnection() (*sql.DB, error) {
 	dsn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable timezone=UTC connect_timeout=5", host, port, user, password, dbname)
 
-	db, err := sql.Open("pgx", dsn)
+	db, err := sql.Open("postgres", dsn)
 	if err != nil {
 		return nil, err
 	}
