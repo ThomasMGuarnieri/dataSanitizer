@@ -5,30 +5,40 @@ import (
 	"dataSanitizer/db"
 	"dataSanitizer/utils"
 	"fmt"
+	"io"
+	"log"
 	"os"
 	"regexp"
 	"strconv"
 	"time"
 )
 
-const bufSize = 1024 * 1024
-
 func main() {
 	var rows [][]interface{}
-	buf := make([]byte, bufSize)
-	file := utils.ReadFile(fmt.Sprintf("%s", os.Args[1]))
+	f := utils.ReadFile(fmt.Sprintf("%s", os.Args[1]))
 	// Changes on the string below may break this program
 	rg := regexp.MustCompile(`(.+) - - \[(.+)] "(.+?) /(.+)" (\d{3})`)
 
-	// Close file when main function finishes
-	defer file.Close()
+	defer f.Close()
 
-	// Read file line by line
-	scn := bufio.NewScanner(file)
-	scn.Buffer(buf, bufSize)
+	r := bufio.NewReader(f)
 
-	for scn.Scan() {
-		rows = append(rows, extractLogLineData(scn.Text(), rg))
+	for {
+		var i []interface{}
+		s, err := r.ReadString('\n')
+		if err != nil && err != io.EOF {
+			log.Fatal(err)
+		}
+
+		if err == io.EOF {
+			break
+		}
+
+		i = extractLogLineData(s, rg)
+
+		if i != nil {
+			rows = append(rows, i)
+		}
 	}
 
 	fmt.Println("Finished processing file")
