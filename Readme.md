@@ -12,6 +12,4 @@ Acessar o banco de dados. É necessário digitar a senha que foi previamente con
 docker exec -it datasanitizer_db_1 psql -Udatasan -W
 ``` 
 
-Considerações: Alguns problemas foram encontrados com relação ao salvamento dos dados, dados foram colocados de forma fixa
-a fim de conseguir realizar as operações de insert. No geral o desempenho de várias operações de insert em sequência
-acabou deixando a execução do script lenta.
+Neste projeto existem 2 branches além da 'main', cada uma delas aborda a solução de maneira diferente. Na main está a pior delas. Na branch changeDataLog está a última e melhor delas. Nesta última foram utilizadas threads para melhorar a velocidade de processamento, enquanto o arquivo foi lido linha a linha, passando os dados para um buffered channel, permitindo um controle maior do consumo de memória ram.
